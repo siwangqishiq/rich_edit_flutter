@@ -224,3 +224,42 @@ class EmojiText extends StatelessWidget{
     );
   }
 }//end class
+
+class EmojiInputText extends StatelessWidget{
+  ValueChanged<String>? onChangeCallback;
+
+  late RichTextEditingController _controller;
+
+  EmojiInputText({Key? key , this.onChangeCallback}) : super(key: key){
+    _controller = RichTextEditingController();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      onChanged: _onChange,
+      controller: _controller,
+    );
+  }
+
+  void _onChange(String content){
+    onChangeCallback?.call(_controller.text);
+  }
+}
+
+class RichTextEditingController extends TextEditingController {
+
+  @override
+  TextSpan buildTextSpan({required BuildContext context, TextStyle? style, required bool withComposing}) {
+
+    if(text.isEmpty){
+      return TextSpan(
+        text: "",
+        style: style
+      );
+    }
+
+    List<InlineSpan> textSpans = EmojiManager.instance.parseContent(text , style : style);
+    return TextSpan(children: textSpans);
+  }
+}

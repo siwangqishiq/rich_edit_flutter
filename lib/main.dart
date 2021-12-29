@@ -90,11 +90,6 @@ class _MyHomePageState extends State<MyHomePage> {
     print(inputContent);
 
     
-    // _controller.value = TextEditingValue(
-    //   text: inputContent!,
-    //   selection: TextSelection.fromPosition(TextPosition(offset: inputContent.length , affinity: TextAffinity.downstream))
-    // );
-
   }
 }
 
