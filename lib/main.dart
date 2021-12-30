@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:rich_input/emoji.dart';
 
 void main() {
@@ -34,21 +35,26 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
 
-  final RichTextEditingController _controller = RichTextEditingController();
   
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final GlobalKey<EditableTextState> edKey = GlobalKey<EditableTextState>();
+
+  final RichTextEditingController _controller = RichTextEditingController();
+
+  late final TextEditingController _edController;
 
   @override
   void initState() {
     super.initState();
-  }
+    _edController = RichTextEditingController();
+    _edController.text = "Heloo";
 
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
+    _edController.addListener(() {
+      //print("edcontroller ${_edController.text}");
+      //print();
+      edKey.currentState?.updateFloatingCursor(RawFloatingCursorPoint(state: FloatingCursorDragState.Start , offset: Offset(200,200)));
     });
   }
-
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   Widget build(BuildContext _context) {
@@ -63,53 +69,31 @@ class _MyHomePageState extends State<MyHomePage> {
           children: <Widget>[
             const Padding(
               padding:EdgeInsets.all(20),
-              child: EmojiText("你好世界[ah][coffee]hahah\n重来[ah][[[dasdsa[bad]]]]]][yes]]" , style: TextStyle(fontSize: 40 , color: Colors.red),), 
+              child: EmojiText("" , style: TextStyle(fontSize: 40 , color: Colors.red),), 
             ),
             Padding(
               padding:const EdgeInsets.all(20),
-              child: TextField(
-                maxLines: null,
-                onChanged: onInputChange,
-                style:const TextStyle(fontSize: 40.0),
-                controller: _controller,
-                showCursor: true,
-              ), 
+              child: EmojiInputText(), 
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   void onInputChange(String? inputContent){
     print(inputContent);
-
-    
   }
 }
 
 
-class RichTextEditingController extends TextEditingController {
 
-  @override
-  TextSpan buildTextSpan({required BuildContext context, TextStyle? style, required bool withComposing}) {
-
-    if(text.isEmpty){
-      return TextSpan(
-        text: "",
-        style: style
-      );
-    }
-
-    List<InlineSpan> textSpans = EmojiManager.instance.parseContent(text , style : style);
-    return TextSpan(children: textSpans);
-  }
-}
 
 
 

@@ -23,6 +23,10 @@ class EmojiManager{
     loadEmojiData();
   }
 
+  bool checkHasEmoji(String emojiStr){
+    return emojis.containsKey(findEmojiRealName(emojiStr));
+  }
+
   List<String> listAllEmoji(){
     List<String> emojiList = emojis.keys.toList();
     return emojiList;
@@ -60,7 +64,7 @@ class EmojiManager{
           emojiBuffer.clear();
           state = PARSE_STATE_TEXT;   
 
-          String emojiRealName = _emojiRealName(emojiName);
+          String emojiRealName = findEmojiRealName(emojiName);
           //print("emoji : $emojiRealName  $emojiName");
 
           if(emojis.containsKey(emojiRealName)){
@@ -71,7 +75,15 @@ class EmojiManager{
             }
 
             var path = emojis[emojiRealName];
-            spanList.add(WidgetSpan(child: SizedBox(child: Image.asset(path!) , width: 64 , height: 64)));
+
+            spanList.add(
+              TextSpan(children: [
+                WidgetSpan(child: Image.asset(path!))
+              ])
+            );
+
+
+            //spanList.add(WidgetSpan(child: SizedBox(child: Image.asset(path!) , width: 64 , height: 64)));
           }else{
             textBuffer.write(emojiName);
           }
@@ -96,11 +108,11 @@ class EmojiManager{
       textBuffer.clear();
     }
 
-    print("spanlist ${spanList.length} ${spanList[0].runtimeType}");
+    //print("spanlist ${spanList.length} ${spanList[0].runtimeType}");
     return spanList;
   }
 
-  String _emojiRealName(String emojiName){
+  String findEmojiRealName(String emojiName){
     if(emojiName.startsWith("[") && emojiName.endsWith("]")){
       return emojiName.substring(1 , emojiName.length - 1);
     }
@@ -203,7 +215,6 @@ class EmojiManager{
   String buildAssetFilePath(String filename) => folderPath() + filename;
 
   String folderPath() => "assets/emoji/";
-
 }//end class
 
 
@@ -225,41 +236,99 @@ class EmojiText extends StatelessWidget{
   }
 }//end class
 
-class EmojiInputText extends StatelessWidget{
+class EmojiInputText extends StatefulWidget{
   ValueChanged<String>? onChangeCallback;
+  late RichTextEditingController controller;
+  late final FocusNode? node;
 
-  late RichTextEditingController _controller;
-
-  EmojiInputText({Key? key , this.onChangeCallback}) : super(key: key){
-    _controller = RichTextEditingController();
+  EmojiInputText({Key? key ,FocusNode? focusNode, this.onChangeCallback ,}) : super(key: key){
+    controller = RichTextEditingController();
+    node = focusNode;
   }
+
+  @override
+  State<StatefulWidget> createState() => EmojiInputTextState();
+}//end class
+
+class EmojiInputTextState extends State<EmojiInputText>{
+  String? _originContent;
 
   @override
   Widget build(BuildContext context) {
     return TextField(
       onChanged: _onChange,
-      controller: _controller,
+      controller: widget.controller,
+      focusNode: widget.node,
     );
   }
 
   void _onChange(String content){
-    onChangeCallback?.call(_controller.text);
+    if(_originContent != null && _originContent!.length > content.length){
+      _handleDel(widget.controller.selection.start , content , _originContent);
+    }
+
+    String currentContent = widget.controller.text;
+    widget.onChangeCallback?.call(currentContent);
+    _originContent = currentContent;
+  }
+
+  void _handleDel(int delPosition , String? current , String? origin){
+    if(origin == null || delPosition <0 || delPosition >= origin.length){
+      return;
+    }
+
+    String originStr = origin;
+    int len = originStr.length;
+    StringBuffer buffer = StringBuffer();
+    int leftIndex = 0;
+    int rightIndex = 0;
+    bool isEmoji = false;
+    if(originStr[delPosition] == "["){
+      leftIndex = delPosition;
+      rightIndex = delPosition + 1;
+
+      while(rightIndex <= len && originStr[rightIndex] != "]" ){
+        rightIndex++;
+      }//end while
+
+      isEmoji = rightIndex <= len && originStr[rightIndex] == "]";
+    }else if(originStr[delPosition] == "]"){
+      leftIndex = delPosition - 1;
+      rightIndex = delPosition;
+
+      while(leftIndex >= 0 && originStr[leftIndex] != "["){
+        leftIndex--;
+      }//end while
+
+      isEmoji = leftIndex >= 0 && originStr[leftIndex] == "[";
+    }else{
+
+    }
+
+    if(!isEmoji || rightIndex - leftIndex <= 0){
+      return;
+    }
+
+    String name = origin.substring(leftIndex , rightIndex + 1);
+    print("name : $name");
+
+    if(EmojiManager.instance.checkHasEmoji(name)){
+      widget.controller.text = origin.substring(0 , leftIndex) 
+        + origin.substring(rightIndex + 1);
+      widget.controller.selection = TextSelection.collapsed(offset: leftIndex);
+    }
   }
 }
 
 class RichTextEditingController extends TextEditingController {
+  RichTextEditingController();
 
   @override
   TextSpan buildTextSpan({required BuildContext context, TextStyle? style, required bool withComposing}) {
-
     if(text.isEmpty){
-      return TextSpan(
-        text: "",
-        style: style
-      );
+      return TextSpan(text: "",style: style);
     }
 
-    List<InlineSpan> textSpans = EmojiManager.instance.parseContent(text , style : style);
-    return TextSpan(children: textSpans);
+    return TextSpan(children: EmojiManager.instance.parseContent(text , style : style));
   }
 }
