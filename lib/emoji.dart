@@ -68,22 +68,8 @@ class EmojiManager{
           //print("emoji : $emojiRealName  $emojiName");
 
           if(emojis.containsKey(emojiRealName)){
-            
-            if(textBuffer.isNotEmpty){
-              spanList.add(TextSpan(text: textBuffer.toString() , style: style));
-              textBuffer.clear();
-            }
-
-            var path = emojis[emojiRealName];
-
-            spanList.add(
-              TextSpan(children: [
-                WidgetSpan(child: Image.asset(path!))
-              ])
-            );
-
-
-            //spanList.add(WidgetSpan(child: SizedBox(child: Image.asset(path!) , width: 64 , height: 64)));
+            _createNormalText(spanList , textBuffer , style);
+            spanList.add(_createEmojiSpan(emojis[emojiRealName]! , style));
           }else{
             textBuffer.write(emojiName);
           }
@@ -103,13 +89,29 @@ class EmojiManager{
       emojiBuffer.clear();
     }
 
-    if(textBuffer.isNotEmpty){
-      spanList.add(TextSpan(text: textBuffer.toString() , style: style));
-      textBuffer.clear();
-    }
+    _createNormalText(spanList , textBuffer , style);
 
     //print("spanlist ${spanList.length} ${spanList[0].runtimeType}");
     return spanList;
+  }
+
+  void _createNormalText(List<InlineSpan> spanList , StringBuffer textBuffer , TextStyle? style){
+    if(textBuffer.isNotEmpty){
+      spanList.add(_createTextSpan(textBuffer.toString() , style));
+      textBuffer.clear();
+    }
+  }
+
+  InlineSpan _createEmojiSpan(String path , TextStyle? style){
+    double size = 64;
+    if(style != null){
+      size = style.fontSize! + 10;
+    }
+    return WidgetSpan(child: SizedBox(child: Image.asset(path) , width: size));
+  }
+
+  InlineSpan _createTextSpan(String content , TextStyle? style){
+    return TextSpan(text: content , style: style);
   }
 
   String findEmojiRealName(String emojiName){
@@ -278,21 +280,11 @@ class EmojiInputTextState extends State<EmojiInputText>{
     }
 
     String originStr = origin;
-    int len = originStr.length;
-    StringBuffer buffer = StringBuffer();
     int leftIndex = 0;
     int rightIndex = 0;
     bool isEmoji = false;
-    if(originStr[delPosition] == "["){
-      leftIndex = delPosition;
-      rightIndex = delPosition + 1;
 
-      while(rightIndex <= len && originStr[rightIndex] != "]" ){
-        rightIndex++;
-      }//end while
-
-      isEmoji = rightIndex <= len && originStr[rightIndex] == "]";
-    }else if(originStr[delPosition] == "]"){
+    if(originStr[delPosition] == "]"){
       leftIndex = delPosition - 1;
       rightIndex = delPosition;
 
@@ -301,8 +293,6 @@ class EmojiInputTextState extends State<EmojiInputText>{
       }//end while
 
       isEmoji = leftIndex >= 0 && originStr[leftIndex] == "[";
-    }else{
-
     }
 
     if(!isEmoji || rightIndex - leftIndex <= 0){
@@ -310,7 +300,7 @@ class EmojiInputTextState extends State<EmojiInputText>{
     }
 
     String name = origin.substring(leftIndex , rightIndex + 1);
-    print("name : $name");
+    // print("name : $name");
 
     if(EmojiManager.instance.checkHasEmoji(name)){
       widget.controller.text = origin.substring(0 , leftIndex) 
